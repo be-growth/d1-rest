@@ -3,25 +3,25 @@
  * https://developers.cloudflare.com/workers/wrangler/configuration/
  */
 {
-	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "d1-rest",
-	"main": "src/index.ts",
-	"compatibility_date": "2025-03-03",
-    "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "utua-quiz-db",
-          "database_id": "90182616-5fc9-4fdc-8375-f21ef0f36826"
-        }
-    ],
-    "secrets_store_secrets": [
-        {
-            "store_id": "57800710d6934cc4b41158701ecddb95",
-            "binding": "SECRET",
-            "secret_name": "teste"
-        }
-    ],
-	"observability": {
-		"enabled": true
-	}
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "d1-rest",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-03",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "utua-quiz-db",
+      "database_id": "90182616-5fc9-4fdc-8375-f21ef0f36826"
+    }
+  ],
+  "secrets_store_secrets": [
+    {
+      "store_id": "57800710d6934cc4b41158701ecddb95",
+      "binding": "API_KEY",
+      "secret_name": "teste"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
 }

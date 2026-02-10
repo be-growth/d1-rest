@@ -102,22 +102,32 @@ async function handlePost(
   tableName: string
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
-  const data = await c.req.json();
-
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return c.json({ error: "Invalid data format" }, 400);
-  }
 
   try {
+    const data = await c.req.json();
+
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return c.json({ success: false, error: "Invalid data format" }, 400);
+    }
+
     const columns = Object.keys(data).map(sanitizeIdentifier);
     const placeholders = columns.map(() => "?").join(", ");
 
-    // TRATATIVA DE ENTRADA: Objeto -> String / Boolean -> Number
     const params = columns.map((col) => {
       const value = data[col];
-      if (value !== null && typeof value === "object")
+
+      if (value !== null && typeof value === "object") {
         return JSON.stringify(value);
-      if (typeof value === "boolean") return value ? 1 : 0;
+      }
+
+      if (typeof value === "boolean") {
+        return value ? 1 : 0;
+      }
+
+      if (value === undefined || value === null) {
+        return null;
+      }
+
       return value;
     });
 
@@ -125,13 +135,27 @@ async function handlePost(
       ", "
     )}) VALUES (${placeholders})`;
 
-    await c.env.DB.prepare(query)
+    const result = await c.env.DB.prepare(query)
       .bind(...params)
       .run();
 
-    return c.json({ message: "Resource created successfully", data }, 201);
+    return c.json(
+      {
+        success: true,
+        message: `${tableName} created successfully`,
+        id: data.slug || result.meta.last_row_id,
+      },
+      201
+    );
   } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    if (error.message.includes("UNIQUE constraint failed")) {
+      return c.json(
+        { success: false, error: "Este Slug já está em uso." },
+        409
+      );
+    }
+
+    return c.json({ success: false, error: error.message }, 500);
   }
 }
 

@@ -198,9 +198,13 @@ async function handleUpdate(
       .bind(...params, id)
       .run();
 
-    return c.json({ message: "Resource updated successfully", data });
+    return c.json({
+      success: true,
+      message: "Resource updated successfully",
+      data,
+    });
   } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ success: false, error: error.message }, 500);
   }
 }
 
@@ -223,9 +227,9 @@ async function handleDelete(
       return c.json({ error: "Record not found" }, 404);
     }
 
-    return c.json({ message: "Resource deleted successfully" });
+    return c.json({ success: true, message: "Resource deleted successfully" });
   } catch (error: any) {
-    return c.json({ error: error.message }, 500);
+    return c.json({ success: false, error: error.message }, 500);
   }
 }
 

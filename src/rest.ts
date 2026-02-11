@@ -23,71 +23,68 @@ async function handleGet(
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
   const searchParams = new URL(c.req.url).searchParams;
+  const idColumn = tableName === "quizzes" ? "slug" : "id";
 
   try {
-    let query = `SELECT * FROM ${table}`;
     const params: any[] = [];
     const conditions: string[] = [];
 
     if (id) {
-      // Em quizzes, seu ID costuma ser a coluna 'slug'
-      // Se na sua tabela a chave primária for 'id', mantenha 'id = ?'
-      const idColumn = tableName === "quizzes" ? "slug" : "id";
       conditions.push(`${idColumn} = ?`);
       params.push(id);
     }
 
     for (const [key, value] of searchParams.entries()) {
-      if (["sort_by", "order", "limit", "offset"].includes(key)) continue;
-      const sanitizedKey = sanitizeIdentifier(key);
-      conditions.push(`${sanitizedKey} = ?`);
+      if (["sort_by", "order", "limit", "page"].includes(key)) continue;
+      conditions.push(`${sanitizeIdentifier(key)} = ?`);
       params.push(value);
     }
 
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(" AND ")}`;
-    }
+    const whereClause =
+      conditions.length > 0 ? ` WHERE ${conditions.join(" AND ")}` : "";
 
-    const sortBy = searchParams.get("sort_by");
-    if (sortBy) {
-      const order =
-        searchParams.get("order")?.toUpperCase() === "DESC" ? "DESC" : "ASC";
-      query += ` ORDER BY ${sanitizeIdentifier(sortBy)} ${order}`;
-    }
+    const limit = parseInt(searchParams.get("limit") || "0");
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const offset = (page - 1) * limit;
 
-    const limit = searchParams.get("limit");
-    if (limit) {
-      query += ` LIMIT ?`;
-      params.push(parseInt(limit));
-      const offset = searchParams.get("offset");
-      if (offset) {
-        query += ` OFFSET ?`;
-        params.push(parseInt(offset));
-      }
+    const sortBy = searchParams.get("sort_by") || idColumn;
+    const order =
+      searchParams.get("order")?.toUpperCase() === "DESC" ? "DESC" : "ASC";
+
+    let query = `SELECT * FROM ${table}${whereClause} ORDER BY ${sanitizeIdentifier(
+      sortBy
+    )} ${order}`;
+
+    if (limit > 0) {
+      query += ` LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
     }
 
     const { results } = await c.env.DB.prepare(query)
       .bind(...params)
       .all();
 
-    // --- TRATATIVA DE TIPOS (HIDRATAÇÃO) ---
     if (id) {
-      // Se for busca por ID único, retorna o objeto hidratado ou 404
-      if (!results || results.length === 0) {
+      if (!results?.length)
         return c.json({ success: false, error: "Not Found" }, 404);
-      }
-      return c.json({
-        success: true,
-        result: hydrateRow(results[0]),
-      });
+      return c.json({ success: true, result: hydrateRow(results[0]) });
     }
 
-    // Se for listagem, hidrata todos os itens do array
-    const hydratedResults = results.map((row) => hydrateRow(row));
+    const countQuery = `SELECT COUNT(*) as total FROM ${table}${whereClause}`;
+    const countParams = limit > 0 ? params.slice(0, -2) : params;
+    const { total } = (await c.env.DB.prepare(countQuery)
+      .bind(...countParams)
+      .first<{ total: number }>()) || { total: 0 };
 
     return c.json({
       success: true,
-      results: hydratedResults,
+      results: results.map(hydrateRow),
+      pagination: {
+        total_items: total,
+        total_pages: limit > 0 ? Math.ceil(total / limit) : 1,
+        current_page: page,
+        limit: limit || total,
+      },
     });
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500);

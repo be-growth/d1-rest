@@ -7,26 +7,6 @@ export interface Env {
   API_KEY: string;
 }
 
-// # List all users
-// GET /rest/users
-
-// # Get filtered and sorted users
-// GET /rest/users?age=25&sort_by=name&order=desc
-
-// # Get paginated results
-// GET /rest/users?limit=10&offset=20
-
-// # Create a new user
-// POST /rest/users
-// { "name": "John", "age": 30 }
-
-// # Update a user
-// PATCH /rest/users/123
-// { "age": 31 }
-
-// # Delete a user
-// DELETE /rest/users/123
-
 export default {
   async fetch(
     request: Request,

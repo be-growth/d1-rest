@@ -14,6 +14,21 @@
       "database_id": "90182616-5fc9-4fdc-8375-f21ef0f36826"
     }
   ],
+  "env": {
+    "stage": {
+      "name": "d1-rest-stage",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "utua-quiz-db-stage",
+          "database_id": "5eadb4e2-2514-4868-8f12-09cd4896caa5"
+        }
+      ],
+      "vars": {
+        "API_KEY": "chave-de-teste-stage"
+      }
+    }
+  },
   "observability": {
     "enabled": true
   }

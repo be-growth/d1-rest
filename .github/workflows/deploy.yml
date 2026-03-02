@@ -1,0 +1,19 @@
+name: Deploy Worker
+
+on:
+  push:
+    branches:
+      - main
+      - stage
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # Lógica automática: se for a branch stage, usa a flag --env stage
+          command: deploy ${{ github.ref == 'refs/heads/stage' && '--env stage' || '' }}

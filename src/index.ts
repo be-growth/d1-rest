@@ -2,6 +2,8 @@ import { Hono, Context, Next } from "hono";
 import { cors } from "hono/cors";
 import { handleRest } from "./rest";
 
+// Fetch configuration
+
 export interface Env {
   DB: D1Database;
   API_KEY: string;

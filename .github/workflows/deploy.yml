@@ -11,9 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # Lógica automática: se for a branch stage, usa a flag --env stage
+          wranglerVersion: "4.69.0"
           command: deploy ${{ github.ref == 'refs/heads/stage' && '--env stage' || '' }}

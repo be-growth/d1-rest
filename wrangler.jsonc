@@ -16,7 +16,7 @@
   ],
   "env": {
     "stage": {
-      "name": "d1-rest",
+      "name": "d1-rest-stage",
       "d1_databases": [
         {
           "binding": "DB",

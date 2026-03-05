@@ -21,6 +21,7 @@ async function handleGet(
   tableName: string,
   id?: string
 ): Promise<Response> {
+  console.log("log to trigger deploy");
   const table = sanitizeKeyword(tableName);
   const searchParams = new URL(c.req.url).searchParams;
   const idColumn = tableName === "quizzes" ? "slug" : "id";

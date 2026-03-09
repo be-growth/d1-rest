@@ -42,6 +42,17 @@ export default {
       return next();
     };
 
+    // Simple debug route to inspect which D1 database is bound
+    app.get("/debug/db", async (c) => {
+      try {
+        const info = await env.DB.prepare("PRAGMA database_list")
+          .first<Record<string, unknown>>();
+        return c.json({ database_list: info });
+      } catch (error: any) {
+        return c.json({ error: error.message }, 500);
+      }
+    });
+
     // CRUD REST endpoints made available to all of our tables
     app.all("/rest/*", authMiddleware, handleRest);
 

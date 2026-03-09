@@ -1,5 +1,6 @@
 name = "d1-rest"
 main = "src/index.ts"
+compatibility_date = "2026-03-09"
 
 [[d1_databases]]
 binding = "DB"

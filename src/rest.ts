@@ -5,7 +5,7 @@ import { hydrateRow } from "./helpers/index";
 async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
   const workspace = env.BITBUCKET_WORKSPACE;
   const repoSlug = env.BITBUCKET_FRONT_QUIZ_STATIC_REPO || "front-quiz-static";
-  const token = env.BITBUCKET_PIPELINES_TOKEN;
+  const token = env.BITBUCKET_API_TOKEN;
 
   if (!workspace || !token) return;
 

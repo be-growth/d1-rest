@@ -2,6 +2,35 @@ import { Context } from "hono";
 import type { Env } from "./index";
 import { hydrateRow } from "./helpers/index";
 
+async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
+  const workspace = env.BITBUCKET_WORKSPACE;
+  const repoSlug = env.BITBUCKET_FRONT_QUIZ_STATIC_REPO || "front-quiz-static";
+  const token = env.BITBUCKET_PIPELINES_TOKEN;
+
+  if (!workspace || !token) return;
+
+  const url = `https://api.bitbucket.org/2.0/repositories/${workspace}/${repoSlug}/pipelines/`;
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        target: {
+          type: "pipeline_ref_target",
+          ref_type: "branch",
+          ref_name: branch,
+        },
+      }),
+    });
+  } catch {
+    // Falha no trigger não deve quebrar a criação/edição de quiz
+  }
+}
+
 /**
  * Sanitizes an identifier by removing all non-alphanumeric characters except underscores.
  */
@@ -136,6 +165,14 @@ async function handlePost(
       .bind(...params)
       .run();
 
+    if (tableName === "quizzes") {
+      // Dispara build do front-quiz-static para refletir novos quizzes
+      void triggerFrontQuizStaticBuild(
+        c.env,
+        c.env.BITBUCKET_STAGE_BRANCH || "stage"
+      );
+    }
+
     return c.json(
       {
         success: true,
@@ -194,6 +231,14 @@ async function handleUpdate(
     await c.env.DB.prepare(finalQuery)
       .bind(...params, id)
       .run();
+
+    if (tableName === "quizzes") {
+      // Dispara build do front-quiz-static para refletir alterações em quizzes existentes
+      void triggerFrontQuizStaticBuild(
+        c.env,
+        c.env.BITBUCKET_STAGE_BRANCH || "stage"
+      );
+    }
 
     return c.json({
       success: true,

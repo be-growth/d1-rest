@@ -7,6 +7,10 @@ import { handleRest } from "./rest";
 export interface Env {
   DB: D1Database;
   API_KEY: string;
+  BITBUCKET_WORKSPACE?: string;
+  BITBUCKET_FRONT_QUIZ_STATIC_REPO?: string;
+  BITBUCKET_PIPELINES_TOKEN?: string;
+  BITBUCKET_STAGE_BRANCH?: string;
 }
 
 export default {

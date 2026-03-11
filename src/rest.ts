@@ -7,12 +7,18 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
   const repoSlug = env.BITBUCKET_FRONT_QUIZ_STATIC_REPO || "front-quiz-static";
   const token = env.BITBUCKET_API_TOKEN;
 
-  if (!workspace || !token) return;
+  if (!workspace || !token) {
+    console.log("Bitbucket trigger skipped: missing workspace or token", {
+      hasWorkspace: Boolean(workspace),
+      hasToken: Boolean(token),
+    });
+    return;
+  }
 
   const url = `https://api.bitbucket.org/2.0/repositories/${workspace}/${repoSlug}/pipelines/`;
 
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -26,7 +32,23 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
         },
       }),
     });
-  } catch {
+
+    const ok = res.ok;
+    const status = res.status;
+    const text = await res.text();
+
+    console.log("Bitbucket pipeline trigger response", {
+      url,
+      branch,
+      ok,
+      status,
+      body: text,
+    });
+  } catch (error) {
+    console.log("Bitbucket pipeline trigger failed", {
+      error: (error as Error).message,
+      branch,
+    });
     // Falha no trigger não deve quebrar a criação/edição de quiz
   }
 }

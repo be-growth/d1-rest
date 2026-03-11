@@ -2,15 +2,27 @@ import { Hono, Context, Next } from "hono";
 import { cors } from "hono/cors";
 import { handleRest } from "./rest";
 
-// Fetch configuration
-
 export interface Env {
-  DB: D1Database;
+  DB?: D1Database;
+  DB_PROD: D1Database;
+  DB_STAGE: D1Database;
   API_KEY: string;
   BITBUCKET_WORKSPACE?: string;
   BITBUCKET_FRONT_QUIZ_STATIC_REPO?: string;
   BITBUCKET_API_TOKEN?: string;
   BITBUCKET_STAGE_BRANCH?: string;
+}
+
+function isStage(request: Request): boolean {
+  const url = new URL(request.url);
+  const host = url.hostname;
+  const header = request.headers.get("X-Environment");
+  const queryEnv = url.searchParams.get("env");
+  return (
+    host.includes("stage") ||
+    header?.toLowerCase() === "stage" ||
+    queryEnv?.toLowerCase() === "stage"
+  );
 }
 
 export default {
@@ -19,16 +31,21 @@ export default {
     env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
+    const stage = isStage(request);
+    const db = stage ? env.DB_STAGE : env.DB_PROD;
+    const pipelineBranch = stage ? "stage" : (env.BITBUCKET_STAGE_BRANCH || "main");
+    const effectiveEnv: Env = {
+      ...env,
+      DB: db,
+      BITBUCKET_STAGE_BRANCH: pipelineBranch,
+    };
+
     const app = new Hono<{ Bindings: Env }>();
 
-    // Apply CORS to all routes
     app.use("*", async (c, next) => {
       return cors()(c, next);
     });
 
-    // Authentication middleware that verifies the Authorization header
-    // is sent in on each request and matches the value of our API key.
-    // If a match is not found we return a 401 and prevent further access.
     const authMiddleware = async (c: Context, next: Next) => {
       const authHeader = c.req.header("Authorization");
       if (!authHeader) {
@@ -39,17 +56,16 @@ export default {
         ? authHeader.substring(7)
         : authHeader;
 
-      if (token !== env.API_KEY) {
+      if (token !== c.env.API_KEY) {
         return c.json({ error: "Unauthorized" }, 401);
       }
 
       return next();
     };
 
-    // Simple debug route to inspect which D1 database is bound
     app.get("/debug/db", async (c) => {
       try {
-        const info = await env.DB.prepare("PRAGMA database_list")
+        const info = await c.env.DB!.prepare("PRAGMA database_list")
           .first<Record<string, unknown>>();
         return c.json({ database_list: info });
       } catch (error: any) {
@@ -57,10 +73,8 @@ export default {
       }
     });
 
-    // CRUD REST endpoints made available to all of our tables
     app.all("/rest/*", authMiddleware, handleRest);
 
-    // Execute a raw SQL statement with parameters with this route
     app.post("/query", authMiddleware, async (c) => {
       try {
         const body = await c.req.json();
@@ -70,8 +84,7 @@ export default {
           return c.json({ error: "Query is required" }, 400);
         }
 
-        // Execute the query against D1 database
-        const results = await env.DB.prepare(query)
+        const results = await c.env.DB!.prepare(query)
           .bind(...(params || []))
           .all();
 
@@ -81,6 +94,6 @@ export default {
       }
     });
 
-    return app.fetch(request, env, ctx);
+    return app.fetch(request, effectiveEnv, ctx);
   },
 } satisfies ExportedHandler<Env>;

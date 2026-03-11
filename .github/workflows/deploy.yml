@@ -18,6 +18,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: "ee9d89ea2e8bc93a0e26d29707e17454"
           wranglerVersion: "4.69.0"
-          command: deploy ${{ github.ref == 'refs/heads/stage' && '--env stage' || '' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: deploy

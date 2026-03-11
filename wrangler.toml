@@ -18,3 +18,8 @@ API_KEY = "90a9161a-ea98-41bd-b1b0-d9fe8c0ce91c"
 BITBUCKET_WORKSPACE = "tech-utua"
 BITBUCKET_FRONT_QUIZ_STATIC_REPO = "front-quiz-static"
 BITBUCKET_STAGE_BRANCH = "main"
+
+[observability]
+[observability.logs]
+enabled = false
+invocation_logs = true

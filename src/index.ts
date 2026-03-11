@@ -7,6 +7,7 @@ export interface Env {
   DB_PROD: D1Database;
   DB_STAGE: D1Database;
   API_KEY: string;
+  BITBUCKET_USERNAME?: string;
   BITBUCKET_WORKSPACE?: string;
   BITBUCKET_FRONT_QUIZ_STATIC_REPO?: string;
   BITBUCKET_API_TOKEN?: string;

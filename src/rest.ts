@@ -6,6 +6,7 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
   const workspace = env.BITBUCKET_WORKSPACE;
   const repoSlug = env.BITBUCKET_FRONT_QUIZ_STATIC_REPO || "front-quiz-static";
   const token = env.BITBUCKET_API_TOKEN;
+  const username = env.BITBUCKET_USERNAME;
 
   if (!workspace || !token) {
     console.log("Bitbucket trigger skipped: missing workspace or token", {
@@ -17,11 +18,16 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
 
   const url = `https://api.bitbucket.org/2.0/repositories/${workspace}/${repoSlug}/pipelines/`;
 
+  const authHeader =
+    username && token
+      ? `Basic ${btoa(`${username}:${token}`)}`
+      : `Bearer ${token}`;
+
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: authHeader,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

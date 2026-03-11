@@ -53,16 +53,10 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
   }
 }
 
-/**
- * Sanitizes an identifier by removing all non-alphanumeric characters except underscores.
- */
 function sanitizeIdentifier(identifier: string): string {
   return identifier.replace(/[^a-zA-Z0-9_]/g, "");
 }
 
-/**
- * Processing when the table name is a keyword in SQLite.
- */
 function sanitizeKeyword(identifier: string): string {
   return "`" + sanitizeIdentifier(identifier) + "`";
 }
@@ -111,7 +105,7 @@ async function handleGet(
       params.push(limit, offset);
     }
 
-    const { results } = await c.env.DB.prepare(query)
+    const { results } = await c.env.DB!.prepare(query)
       .bind(...params)
       .all();
 
@@ -123,7 +117,7 @@ async function handleGet(
 
     const countQuery = `SELECT COUNT(*) as total FROM ${table}${whereClause}`;
     const countParams = limit > 0 ? params.slice(0, -2) : params;
-    const { total } = (await c.env.DB.prepare(countQuery)
+    const { total } = (await c.env.DB!.prepare(countQuery)
       .bind(...countParams)
       .first<{ total: number }>()) || { total: 0 };
 
@@ -142,9 +136,6 @@ async function handleGet(
   }
 }
 
-/**
- * Handles POST requests to create new records
- */
 async function handlePost(
   c: Context<{ Bindings: Env }>,
   tableName: string
@@ -183,15 +174,16 @@ async function handlePost(
       ", "
     )}) VALUES (${placeholders})`;
 
-    const result = await c.env.DB.prepare(query)
+    const result = await c.env.DB!.prepare(query)
       .bind(...params)
       .run();
 
     if (tableName === "quizzes") {
-      // Dispara build do front-quiz-static para refletir novos quizzes
-      void triggerFrontQuizStaticBuild(
-        c.env,
-        c.env.BITBUCKET_STAGE_BRANCH || "stage"
+      c.executionCtx?.waitUntil(
+        triggerFrontQuizStaticBuild(
+          c.env,
+          c.env.BITBUCKET_STAGE_BRANCH || "stage"
+        )
       );
     }
 
@@ -215,9 +207,6 @@ async function handlePost(
   }
 }
 
-/**
- * Handles PUT/PATCH requests to update records
- */
 async function handleUpdate(
   c: Context<{ Bindings: Env }>,
   tableName: string,
@@ -234,7 +223,6 @@ async function handleUpdate(
     const columns = Object.keys(data).map(sanitizeIdentifier);
     const setColumns = columns.map((col) => `${col} = ?`).join(", ");
 
-    // TRATATIVA DE ENTRADA: Objeto -> String / Boolean -> Number
     const params = columns.map((col) => {
       const value = data[col];
       if (value !== null && typeof value === "object")
@@ -243,22 +231,21 @@ async function handleUpdate(
       return value;
     });
 
-    // O ID deve ser o último parâmetro para bater com o WHERE id = ?
     const query = `UPDATE ${table} SET ${setColumns} WHERE id = ?`;
 
-    // Nota: Se a tabela for quizzes, use o slug como id na query se necessário
     const idColumn = tableName === "quizzes" ? "slug" : "id";
     const finalQuery = `UPDATE ${table} SET ${setColumns} WHERE ${idColumn} = ?`;
 
-    await c.env.DB.prepare(finalQuery)
+    await c.env.DB!.prepare(finalQuery)
       .bind(...params, id)
       .run();
 
     if (tableName === "quizzes") {
-      // Dispara build do front-quiz-static para refletir alterações em quizzes existentes
-      void triggerFrontQuizStaticBuild(
-        c.env,
-        c.env.BITBUCKET_STAGE_BRANCH || "stage"
+      c.executionCtx?.waitUntil(
+        triggerFrontQuizStaticBuild(
+          c.env,
+          c.env.BITBUCKET_STAGE_BRANCH || "stage"
+        )
       );
     }
 
@@ -280,13 +267,11 @@ async function handleDelete(
   const table = sanitizeKeyword(tableName);
 
   try {
-    // Define dinamicamente a coluna de identificação
     const idColumn = tableName === "quizzes" ? "slug" : "id";
 
     const query = `DELETE FROM ${table} WHERE ${idColumn} = ?`;
-    const result = await c.env.DB.prepare(query).bind(id).run();
+    const result = await c.env.DB!.prepare(query).bind(id).run();
 
-    // Verifica se algum registro foi realmente afetado
     if (result.meta.changes === 0) {
       return c.json({ error: "Record not found" }, 404);
     }
@@ -297,9 +282,6 @@ async function handleDelete(
   }
 }
 
-/**
- * Main REST handler that routes requests to appropriate handlers
- */
 export async function handleRest(
   c: Context<{ Bindings: Env }>
 ): Promise<Response> {

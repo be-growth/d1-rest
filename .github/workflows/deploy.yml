@@ -1,21 +1,18 @@
 name: Deploy Worker
-
 on:
   push:
     branches:
       - main
       - stage
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: "ee9d89ea2e8bc93a0e26d29707e17454"
           wranglerVersion: "4.69.0"
-          command: deploy
+          command: deploy ${{ github.ref_name == 'stage' && '--env stage' || '' }}

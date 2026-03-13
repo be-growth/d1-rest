@@ -2,26 +2,21 @@ import { Context } from "hono";
 import type { Env } from "./index";
 import { hydrateRow } from "./helpers/index";
 
-async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
-  const workspace = env.BITBUCKET_WORKSPACE;
-  const repoSlug = env.BITBUCKET_FRONT_QUIZ_STATIC_REPO || "front-quiz-static";
-  const token = env.BITBUCKET_API_TOKEN;
-  const username = env.BITBUCKET_USERNAME;
+async function triggerFrontQuizStaticBuild(
+  c: Context<{ Bindings: Env }>,
+  branch: string
+) {
+  const env = c.env;
+  const token = env.API_KEY;
 
-  if (!workspace || !token) {
-    console.log("Bitbucket trigger skipped: missing workspace or token", {
-      hasWorkspace: Boolean(workspace),
-      hasToken: Boolean(token),
-    });
+  if (!token) {
+    console.log("Bitbucket trigger skipped: missing token");
     return;
   }
 
-  const url = `https://api.bitbucket.org/2.0/repositories/${workspace}/${repoSlug}/pipelines/`;
+  const url = `https://api.bitbucket.org/2.0/repositories/tech-utua/front-quiz-static/pipelines/`;
 
-  const authHeader =
-    username && token
-      ? `Basic ${btoa(`${username}:${token}`)}`
-      : `Bearer ${token}`;
+  const authHeader = `Basic ${btoa(`guilherme.pavaneli:${token}`)}`;
 
   try {
     const res = await fetch(url, {
@@ -39,22 +34,11 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
       }),
     });
 
-    const ok = res.ok;
-    const status = res.status;
-    const text = await res.text();
-
-    console.log("Bitbucket pipeline trigger response", {
-      url,
-      branch,
-      ok,
-      status,
-      body: text,
+    console.log(`Bitbucket pipeline triggered for branch: ${branch}`, {
+      status: res.status,
     });
   } catch (error) {
-    console.log("Bitbucket pipeline trigger failed", {
-      error: (error as Error).message,
-      branch,
-    });
+    console.error("Bitbucket trigger failed", error);
   }
 }
 
@@ -66,17 +50,15 @@ function sanitizeKeyword(identifier: string): string {
   return "`" + sanitizeIdentifier(identifier) + "`";
 }
 
-/**
- * Helper para definir a branch de destino baseada no DB injetado no contexto
- */
-function getTargetBranch(c: Context<{ Bindings: Env }>): string {
-  return c.env.DB === c.env.DB_STAGE ? "stage" : "main";
+function getTargetBranch(c: Context): string {
+  const url = new URL(c.req.url);
+  return url.hostname.includes("-stage") ? "stage" : "main";
 }
 
 async function handleGet(
   c: Context<{ Bindings: Env }>,
   tableName: string,
-  id?: string,
+  id?: string
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
   const searchParams = new URL(c.req.url).searchParams;
@@ -109,7 +91,7 @@ async function handleGet(
       searchParams.get("order")?.toUpperCase() === "DESC" ? "DESC" : "ASC";
 
     let query = `SELECT * FROM ${table}${whereClause} ORDER BY ${sanitizeIdentifier(
-      sortBy,
+      sortBy
     )} ${order}`;
 
     if (limit > 0) {
@@ -117,8 +99,7 @@ async function handleGet(
       params.push(limit, offset);
     }
 
-    const { results } = await c.env
-      .DB!.prepare(query)
+    const { results } = await c.env.DB.prepare(query)
       .bind(...params)
       .all();
 
@@ -130,8 +111,7 @@ async function handleGet(
 
     const countQuery = `SELECT COUNT(*) as total FROM ${table}${whereClause}`;
     const countParams = limit > 0 ? params.slice(0, -2) : params;
-    const { total } = (await c.env
-      .DB!.prepare(countQuery)
+    const { total } = (await c.env.DB.prepare(countQuery)
       .bind(...countParams)
       .first<{ total: number }>()) || { total: 0 };
 
@@ -152,7 +132,7 @@ async function handleGet(
 
 async function handlePost(
   c: Context<{ Bindings: Env }>,
-  tableName: string,
+  tableName: string
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
 
@@ -175,18 +155,17 @@ async function handlePost(
       return value;
     });
 
-    const query = `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})`;
+    const query = `INSERT INTO ${table} (${columns.join(
+      ", "
+    )}) VALUES (${placeholders})`;
 
-    const result = await c.env
-      .DB!.prepare(query)
+    const result = await c.env.DB.prepare(query)
       .bind(...params)
       .run();
 
     if (tableName === "quizzes") {
-      const branchToTrigger = getTargetBranch(c);
-      c.executionCtx?.waitUntil(
-        triggerFrontQuizStaticBuild(c.env, branchToTrigger),
-      );
+      const branch = getTargetBranch(c);
+      c.executionCtx.waitUntil(triggerFrontQuizStaticBuild(c, branch));
     }
 
     return c.json(
@@ -195,13 +174,13 @@ async function handlePost(
         message: `${tableName} created successfully`,
         id: data.slug || result.meta.last_row_id,
       },
-      201,
+      201
     );
   } catch (error: any) {
     if (error.message.includes("UNIQUE constraint failed")) {
       return c.json(
         { success: false, error: "Este Slug já está em uso." },
-        409,
+        409
       );
     }
     return c.json({ success: false, error: error.message }, 500);
@@ -211,7 +190,7 @@ async function handlePost(
 async function handleUpdate(
   c: Context<{ Bindings: Env }>,
   tableName: string,
-  id: string,
+  id: string
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
   const data = await c.req.json();
@@ -235,16 +214,13 @@ async function handleUpdate(
     const idColumn = tableName === "quizzes" ? "slug" : "id";
     const finalQuery = `UPDATE ${table} SET ${setColumns} WHERE ${idColumn} = ?`;
 
-    await c.env
-      .DB!.prepare(finalQuery)
+    await c.env.DB.prepare(finalQuery)
       .bind(...params, id)
       .run();
 
     if (tableName === "quizzes") {
-      const branchToTrigger = getTargetBranch(c);
-      c.executionCtx?.waitUntil(
-        triggerFrontQuizStaticBuild(c.env, branchToTrigger),
-      );
+      const branch = getTargetBranch(c);
+      c.executionCtx.waitUntil(triggerFrontQuizStaticBuild(c, branch));
     }
 
     return c.json({
@@ -260,14 +236,14 @@ async function handleUpdate(
 async function handleDelete(
   c: Context<{ Bindings: Env }>,
   tableName: string,
-  id: string,
+  id: string
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
 
   try {
     const idColumn = tableName === "quizzes" ? "slug" : "id";
     const query = `DELETE FROM ${table} WHERE ${idColumn} = ?`;
-    const result = await c.env.DB!.prepare(query).bind(id).run();
+    const result = await c.env.DB.prepare(query).bind(id).run();
 
     if (result.meta.changes === 0) {
       return c.json({ error: "Record not found" }, 404);
@@ -280,7 +256,7 @@ async function handleDelete(
 }
 
 export async function handleRest(
-  c: Context<{ Bindings: Env }>,
+  c: Context<{ Bindings: Env }>
 ): Promise<Response> {
   const url = new URL(c.req.url);
   const pathParts = url.pathname.split("/").filter(Boolean);
@@ -288,7 +264,7 @@ export async function handleRest(
   if (pathParts.length < 2) {
     return c.json(
       { error: "Invalid path. Expected format: /rest/{tableName}/{id?}" },
-      400,
+      400
     );
   }
 

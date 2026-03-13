@@ -11,7 +11,7 @@
   ],
   "vars": {
     "API_KEY": "utua-quiz-prd-znvqnRfr3nYFM9sz6iH986GpGJ7LgQ9nD9ybkxBvbWr5qN1m7fdll2rIfqNHwJAq",
-    "BITBUCKET_API_TOKEN": ""
+    "BITBUCKET_API_TOKEN": "ATCTT3xFfGN00Y_LOnzjVaNIFB0Ak9Ri9UHP-NfGbzQUALv2VoEEfgT7DhG3WdOOjLFD-RLVEB2s6wt2E-AR6fSh1kFDfrfUKuaKhhFt7ttv70Rml8roSmkU_Ennh2PKrNxbr6huCF3lqXQ9vP52cg0TwlOZMOh4ZSkQONE0PpDTAL7K_87Kf0o=0A84228A"
   },
   "env": {
     "stage": {
@@ -26,7 +26,7 @@
       ],
       "vars": {
         "API_KEY": "utua-quiz-stg-K1LUK1p6eatIIW6nPWtvRWkx0mIgM0HOEPVeBwIaj9osmfSERrN8LQ1dAeszLjbq",
-        "BITBUCKET_API_TOKEN": ""
+        "BITBUCKET_API_TOKEN": "ATCTT3xFfGN00Y_LOnzjVaNIFB0Ak9Ri9UHP-NfGbzQUALv2VoEEfgT7DhG3WdOOjLFD-RLVEB2s6wt2E-AR6fSh1kFDfrfUKuaKhhFt7ttv70Rml8roSmkU_Ennh2PKrNxbr6huCF3lqXQ9vP52cg0TwlOZMOh4ZSkQONE0PpDTAL7K_87Kf0o=0A84228A"
       }
     }
   }

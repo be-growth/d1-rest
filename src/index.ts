@@ -15,11 +15,6 @@ export default {
   ): Promise<Response> {
     const app = new Hono<{ Bindings: Env }>();
 
-    const effectiveEnv: Env = {
-      ...env,
-      DB: env.DB,
-    };
-
     app.use("*", async (c, next) => {
       return cors()(c, next);
     });
@@ -62,6 +57,6 @@ export default {
       }
     });
 
-    return app.fetch(request, effectiveEnv, ctx);
+    return app.fetch(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

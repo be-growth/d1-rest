@@ -7,7 +7,7 @@ async function triggerFrontQuizStaticBuild(
   branch: string
 ) {
   const env = c.env;
-  const token = env.API_KEY;
+  const token = env.BITBUCKET_API_TOKEN;
 
   if (!token) {
     console.log("Bitbucket trigger skipped: missing token");

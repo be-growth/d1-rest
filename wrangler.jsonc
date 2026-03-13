@@ -1,0 +1,33 @@
+{
+  "name": "d1-rest",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-09",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "utua-quiz-db",
+      "database_id": "90182616-5fc9-4fdc-8375-f21ef0f36826"
+    }
+  ],
+  "vars": {
+    "API_KEY": "utua-quiz-prd-znvqnRfr3nYFM9sz6iH986GpGJ7LgQ9nD9ybkxBvbWr5qN1m7fdll2rIfqNHwJAq",
+    "BITBUCKET_WORKSPACE": "tech-utua"
+  },
+  "env": {
+    "stage": {
+      "name": "d1-rest-stage",
+      "main": "src/index.ts",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "utua-quiz-db-stage",
+          "database_id": "5eadb4e2-2514-4868-8f12-09cd4896caa5"
+        }
+      ],
+      "vars": {
+        "API_KEY": "utua-quiz-stg-K1LUK1p6eatIIW6nPWtvRWkx0mIgM0HOEPVeBwIaj9osmfSERrN8LQ1dAeszLjbq",
+        "BITBUCKET_WORKSPACE": "tech-utua"
+      }
+    }
+  }
+}

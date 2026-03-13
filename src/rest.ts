@@ -16,7 +16,7 @@ async function triggerFrontQuizStaticBuild(
 
   const url = `https://api.bitbucket.org/2.0/repositories/tech-utua/front-quiz-static/pipelines/`;
 
-  const authHeader = `Basic ${btoa(`guilherme.pavaneli:${token}`)}`;
+  const authHeader = `Bearer ${token}`;
 
   try {
     const res = await fetch(url, {

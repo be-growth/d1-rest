@@ -11,6 +11,7 @@ BITBUCKET_WORKSPACE = "tech-utua"
 [env.stage]
 name = "d1-rest-stage"
 main = "src/index.ts"
+compatibility_date = "2026-03-09"
 [[env.stage.d1_databases]]
 binding = "DB"
 database_name = "utua-quiz-db-stage"

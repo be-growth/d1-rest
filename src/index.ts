@@ -11,7 +11,6 @@ export interface Env {
   BITBUCKET_WORKSPACE?: string;
   BITBUCKET_FRONT_QUIZ_STATIC_REPO?: string;
   BITBUCKET_API_TOKEN?: string;
-  BITBUCKET_STAGE_BRANCH?: string;
 }
 
 function isStage(request: Request): boolean {
@@ -30,15 +29,16 @@ export default {
   async fetch(
     request: Request,
     env: Env,
-    ctx: ExecutionContext
+    ctx: ExecutionContext,
   ): Promise<Response> {
     const stage = isStage(request);
+
+    // Define o banco de dados e o contexto baseado no check de stage
     const db = stage ? env.DB_STAGE : env.DB_PROD;
-    const pipelineBranch = stage ? "stage" : (env.BITBUCKET_STAGE_BRANCH || "main");
+
     const effectiveEnv: Env = {
       ...env,
       DB: db,
-      BITBUCKET_STAGE_BRANCH: pipelineBranch,
     };
 
     const app = new Hono<{ Bindings: Env }>();
@@ -66,9 +66,13 @@ export default {
 
     app.get("/debug/db", async (c) => {
       try {
-        const info = await c.env.DB!.prepare("PRAGMA database_list")
+        const info = await c.env
+          .DB!.prepare("PRAGMA database_list")
           .first<Record<string, unknown>>();
-        return c.json({ database_list: info });
+        return c.json({
+          database_list: info,
+          is_stage: stage, // Útil para confirmar o switch manual
+        });
       } catch (error: any) {
         return c.json({ error: error.message }, 500);
       }
@@ -85,7 +89,8 @@ export default {
           return c.json({ error: "Query is required" }, 400);
         }
 
-        const results = await c.env.DB!.prepare(query)
+        const results = await c.env
+          .DB!.prepare(query)
           .bind(...(params || []))
           .all();
 

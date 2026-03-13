@@ -70,7 +70,7 @@ function sanitizeKeyword(identifier: string): string {
 async function handleGet(
   c: Context<{ Bindings: Env }>,
   tableName: string,
-  id?: string
+  id?: string,
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
   const searchParams = new URL(c.req.url).searchParams;
@@ -103,7 +103,7 @@ async function handleGet(
       searchParams.get("order")?.toUpperCase() === "DESC" ? "DESC" : "ASC";
 
     let query = `SELECT * FROM ${table}${whereClause} ORDER BY ${sanitizeIdentifier(
-      sortBy
+      sortBy,
     )} ${order}`;
 
     if (limit > 0) {
@@ -111,7 +111,8 @@ async function handleGet(
       params.push(limit, offset);
     }
 
-    const { results } = await c.env.DB!.prepare(query)
+    const { results } = await c.env
+      .DB!.prepare(query)
       .bind(...params)
       .all();
 
@@ -123,7 +124,8 @@ async function handleGet(
 
     const countQuery = `SELECT COUNT(*) as total FROM ${table}${whereClause}`;
     const countParams = limit > 0 ? params.slice(0, -2) : params;
-    const { total } = (await c.env.DB!.prepare(countQuery)
+    const { total } = (await c.env
+      .DB!.prepare(countQuery)
       .bind(...countParams)
       .first<{ total: number }>()) || { total: 0 };
 
@@ -144,7 +146,7 @@ async function handleGet(
 
 async function handlePost(
   c: Context<{ Bindings: Env }>,
-  tableName: string
+  tableName: string,
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
 
@@ -177,19 +179,19 @@ async function handlePost(
     });
 
     const query = `INSERT INTO ${table} (${columns.join(
-      ", "
+      ", ",
     )}) VALUES (${placeholders})`;
 
-    const result = await c.env.DB!.prepare(query)
+    const result = await c.env
+      .DB!.prepare(query)
       .bind(...params)
       .run();
 
     if (tableName === "quizzes") {
+      const branchToTrigger = c.env.BITBUCKET_STAGE_BRANCH as string;
+
       c.executionCtx?.waitUntil(
-        triggerFrontQuizStaticBuild(
-          c.env,
-          c.env.BITBUCKET_STAGE_BRANCH || "stage"
-        )
+        triggerFrontQuizStaticBuild(c.env, branchToTrigger),
       );
     }
 
@@ -199,13 +201,13 @@ async function handlePost(
         message: `${tableName} created successfully`,
         id: data.slug || result.meta.last_row_id,
       },
-      201
+      201,
     );
   } catch (error: any) {
     if (error.message.includes("UNIQUE constraint failed")) {
       return c.json(
         { success: false, error: "Este Slug já está em uso." },
-        409
+        409,
       );
     }
 
@@ -216,7 +218,7 @@ async function handlePost(
 async function handleUpdate(
   c: Context<{ Bindings: Env }>,
   tableName: string,
-  id: string
+  id: string,
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
   const data = await c.req.json();
@@ -242,16 +244,16 @@ async function handleUpdate(
     const idColumn = tableName === "quizzes" ? "slug" : "id";
     const finalQuery = `UPDATE ${table} SET ${setColumns} WHERE ${idColumn} = ?`;
 
-    await c.env.DB!.prepare(finalQuery)
+    await c.env
+      .DB!.prepare(finalQuery)
       .bind(...params, id)
       .run();
 
     if (tableName === "quizzes") {
+      const branchToTrigger = c.env.BITBUCKET_STAGE_BRANCH as string;
+
       c.executionCtx?.waitUntil(
-        triggerFrontQuizStaticBuild(
-          c.env,
-          c.env.BITBUCKET_STAGE_BRANCH || "stage"
-        )
+        triggerFrontQuizStaticBuild(c.env, branchToTrigger),
       );
     }
 
@@ -268,7 +270,7 @@ async function handleUpdate(
 async function handleDelete(
   c: Context<{ Bindings: Env }>,
   tableName: string,
-  id: string
+  id: string,
 ): Promise<Response> {
   const table = sanitizeKeyword(tableName);
 
@@ -289,7 +291,7 @@ async function handleDelete(
 }
 
 export async function handleRest(
-  c: Context<{ Bindings: Env }>
+  c: Context<{ Bindings: Env }>,
 ): Promise<Response> {
   const url = new URL(c.req.url);
   const pathParts = url.pathname.split("/").filter(Boolean);
@@ -297,7 +299,7 @@ export async function handleRest(
   if (pathParts.length < 2) {
     return c.json(
       { error: "Invalid path. Expected format: /rest/{tableName}/{id?}" },
-      400
+      400,
     );
   }
 

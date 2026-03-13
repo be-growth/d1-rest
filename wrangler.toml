@@ -10,6 +10,7 @@ API_KEY = "utua-quiz-prd-znvqnRfr3nYFM9sz6iH986GpGJ7LgQ9nD9ybkxBvbWr5qN1m7fdll2r
 BITBUCKET_WORKSPACE = "tech-utua"
 [env.stage]
 name = "d1-rest-stage"
+main = "src/index.ts"
 [[env.stage.d1_databases]]
 binding = "DB"
 database_name = "utua-quiz-db-stage"

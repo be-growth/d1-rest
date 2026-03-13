@@ -55,7 +55,6 @@ async function triggerFrontQuizStaticBuild(env: Env, branch: string) {
       error: (error as Error).message,
       branch,
     });
-    // Falha no trigger não deve quebrar a criação/edição de quiz
   }
 }
 
@@ -65,6 +64,13 @@ function sanitizeIdentifier(identifier: string): string {
 
 function sanitizeKeyword(identifier: string): string {
   return "`" + sanitizeIdentifier(identifier) + "`";
+}
+
+/**
+ * Helper para definir a branch de destino baseada no DB injetado no contexto
+ */
+function getTargetBranch(c: Context<{ Bindings: Env }>): string {
+  return c.env.DB === c.env.DB_STAGE ? "stage" : "main";
 }
 
 async function handleGet(
@@ -162,25 +168,14 @@ async function handlePost(
 
     const params = columns.map((col) => {
       const value = data[col];
-
-      if (value !== null && typeof value === "object") {
+      if (value !== null && typeof value === "object")
         return JSON.stringify(value);
-      }
-
-      if (typeof value === "boolean") {
-        return value ? 1 : 0;
-      }
-
-      if (value === undefined || value === null) {
-        return null;
-      }
-
+      if (typeof value === "boolean") return value ? 1 : 0;
+      if (value === undefined || value === null) return null;
       return value;
     });
 
-    const query = `INSERT INTO ${table} (${columns.join(
-      ", ",
-    )}) VALUES (${placeholders})`;
+    const query = `INSERT INTO ${table} (${columns.join(", ")}) VALUES (${placeholders})`;
 
     const result = await c.env
       .DB!.prepare(query)
@@ -188,8 +183,7 @@ async function handlePost(
       .run();
 
     if (tableName === "quizzes") {
-      const branchToTrigger = c.env.BITBUCKET_STAGE_BRANCH as string;
-
+      const branchToTrigger = getTargetBranch(c);
       c.executionCtx?.waitUntil(
         triggerFrontQuizStaticBuild(c.env, branchToTrigger),
       );
@@ -210,7 +204,6 @@ async function handlePost(
         409,
       );
     }
-
     return c.json({ success: false, error: error.message }, 500);
   }
 }
@@ -239,8 +232,6 @@ async function handleUpdate(
       return value;
     });
 
-    const query = `UPDATE ${table} SET ${setColumns} WHERE id = ?`;
-
     const idColumn = tableName === "quizzes" ? "slug" : "id";
     const finalQuery = `UPDATE ${table} SET ${setColumns} WHERE ${idColumn} = ?`;
 
@@ -250,8 +241,7 @@ async function handleUpdate(
       .run();
 
     if (tableName === "quizzes") {
-      const branchToTrigger = c.env.BITBUCKET_STAGE_BRANCH as string;
-
+      const branchToTrigger = getTargetBranch(c);
       c.executionCtx?.waitUntil(
         triggerFrontQuizStaticBuild(c.env, branchToTrigger),
       );
@@ -276,7 +266,6 @@ async function handleDelete(
 
   try {
     const idColumn = tableName === "quizzes" ? "slug" : "id";
-
     const query = `DELETE FROM ${table} WHERE ${idColumn} = ?`;
     const result = await c.env.DB!.prepare(query).bind(id).run();
 

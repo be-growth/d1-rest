@@ -5,13 +5,7 @@ function hydrateValue<T = any>(value: any): T {
   // 1. Check imediato para nulos/indefinidos
   if (value === null || value === undefined) return value;
 
-  // 2. Tratativa estrita para Booleans (D1 usa 0 e 1)
-  // Nota: Verificamos o nome da coluna ou contexto se necessário,
-  // mas como o SQLite é dinâmico, 0/1 costumam ser booleans em flags.
-  if (value === 0) return false as any;
-  if (value === 1) return true as any;
-
-  // 3. Parse de JSON apenas se for string e tiver estrutura de objeto/array
+  // 2. Parse de JSON apenas se for string e tiver estrutura de objeto/array
   if (typeof value === "string") {
     const firstChar = value[0];
     if (firstChar === "{" || firstChar === "[") {
@@ -26,6 +20,17 @@ function hydrateValue<T = any>(value: any): T {
   return value;
 }
 
+const BOOLEAN_KEYS = new Set([
+  // Quiz flags
+  "rtl",
+  "show_welcome",
+  "show_timer",
+  "gtm",
+  "requiresWhatsapp",
+  // Question flags
+  "redirectable",
+]);
+
 /**
  * Hidrata uma linha inteira do banco de dados.
  */
@@ -34,6 +39,19 @@ export function hydrateRow<T = any>(row: Record<string, any>): T {
 
   // Usamos Object.fromEntries para uma sintaxe mais limpa e funcional
   return Object.fromEntries(
-    Object.entries(row).map(([key, value]) => [key, hydrateValue(value)])
+    Object.entries(row).map(([key, value]) => {
+      // D1 frequentemente salva booleans como 0/1.
+      // Para evitar quebrar campos numéricos (ex: min=1), só convertemos chaves
+      // explicitamente conhecidas como flags booleanas.
+      if (
+        typeof value === "number" &&
+        (value === 0 || value === 1) &&
+        BOOLEAN_KEYS.has(key)
+      ) {
+        return [key, value === 1];
+      }
+
+      return [key, hydrateValue(value)];
+    })
   ) as T;
 }
